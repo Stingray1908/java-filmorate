@@ -7,16 +7,13 @@ import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDate;
 
-/**
- * Film.
- */
 @Data
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Builder
-public class Film {
+public class User {
     int id;
+    String email;
+    String login;
     String name;
-    String description;
-    LocalDate releaseDate;
-    int duration;
+    LocalDate birthday;
 }
