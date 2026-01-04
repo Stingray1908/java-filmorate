@@ -5,6 +5,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.UserService;
+import ru.yandex.practicum.filmorate.storage.user.InMemoryUserStorage;
+import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
 import java.time.Month;
@@ -16,10 +19,13 @@ public class UserControllerTest {
     private UserController userController;
     private User user;
     private Executable validExecutor;
+    private final UserStorage userStorage = new InMemoryUserStorage();
+    private final UserService userService = new UserService(userStorage);
+
 
     @BeforeEach
     public void beforeEach() {
-        userController = new UserController();
+        userController = new UserController(userService);
         user = User.builder()
                 .name("Donald")
                 .email("Trump@yandex.ru")
@@ -27,18 +33,18 @@ public class UserControllerTest {
                 .birthday(
                         LocalDate.of(1946, Month.JUNE, 14))
                 .build();
-        validExecutor = () -> userController.validate(user);
+        validExecutor = () -> userService.validate(user);
     }
 
     @Test
     public void shouldThrowValidateExceptionIfFilmIsNull() {
         User nullUser = null;
-        assertThrows(ValidationException.class, () -> userController.validate(nullUser));
+        assertThrows(ValidationException.class, () -> userService.validate(nullUser));
     }
 
     @Test
     public void shouldAssertTrueWhenUserHasAllFieldCorrect() {
-        assertDoesNotThrow(() -> userController.validate(user));
+        assertDoesNotThrow(() -> userService.validate(user));
     }
 
     @Test
