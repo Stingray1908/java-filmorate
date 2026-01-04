@@ -5,45 +5,52 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.service.FilmService;
+import ru.yandex.practicum.filmorate.service.UserService;
+import ru.yandex.practicum.filmorate.storage.film.InMemoryFilmStorage;
+import ru.yandex.practicum.filmorate.storage.user.InMemoryUserStorage;
 
 import java.time.LocalDate;
 import java.time.Month;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static ru.yandex.practicum.filmorate.controller.FilmController.CINEMA_BIRTH;
+import static ru.yandex.practicum.filmorate.service.FilmService.CINEMA_BIRTH;
 
 public class FilmControllerTest {
 
     private FilmController filmController;
     private Film film;
     private Executable validExecutor;
+    private final InMemoryFilmStorage filmStorage = new InMemoryFilmStorage();
+    private final InMemoryUserStorage userStorage = new InMemoryUserStorage();
+    private final FilmService filmService = new FilmService(filmStorage, new UserService(userStorage));
 
     @BeforeEach
-    public void beforeEach() {
-        filmController = new FilmController();
+    void beforeEach() {
+        filmController = new FilmController(filmService);
         film = Film.builder()
                 .name("Sleepy Hollow")
                 .description("Horror")
                 .duration(50)
                 .releaseDate(LocalDate.of(1999, Month.NOVEMBER, 17))
                 .build();
-        validExecutor = () -> filmController.validate(film);
+        validExecutor = () -> filmService.validate(film);
     }
 
     @Test
-    public void shouldThrowValidateExceptionIfFilmIsNull() {
+    void shouldThrowValidateExceptionIfFilmIsNull() {
         Film nullFilm = null;
-        assertThrows(ValidationException.class, () -> filmController.validate(nullFilm));
+        assertThrows(ValidationException.class, () -> filmService.validate(nullFilm));
     }
 
     @Test
-    public void shouldAssertTrueWhenUserHasAllFieldCorrect() {
-        assertDoesNotThrow(() -> filmController.validate(film));
+    void shouldAssertTrueWhenFilmHasAllFieldsCorrect() {
+        assertDoesNotThrow(validExecutor);
     }
 
     @Test
-    public void shouldThrowValidateExceptionIfNameIsNull_IsEmpty() {
+    void shouldThrowValidateExceptionIfNameIsNullOrEmpty() {
         film.setName(null);
         assertThrows(ValidationException.class, validExecutor);
         film.setName("   ");
@@ -51,7 +58,7 @@ public class FilmControllerTest {
     }
 
     @Test
-    public void shouldThrowValidateExceptionIfDescriptionLengthMore200Symbols() {
+    void shouldThrowValidateExceptionIfDescriptionLengthMore200Symbols() {
         film.setDescription("s".repeat(199));
         assertDoesNotThrow(validExecutor);
         film.setDescription("s".repeat(200));
@@ -61,7 +68,7 @@ public class FilmControllerTest {
     }
 
     @Test
-    public void shouldThrowValidateExceptionIfDateOfReleaseIsNull_IsBeforeCINEMA_BIRTH() {
+    void shouldThrowValidateExceptionIfDateOfReleaseIsNullOrBeforeCINEMA_BIRTH() {
         film.setReleaseDate(null);
         assertThrows(ValidationException.class, validExecutor);
         film.setReleaseDate(CINEMA_BIRTH.minusDays(1));
@@ -73,7 +80,7 @@ public class FilmControllerTest {
     }
 
     @Test
-    public void shouldThrowValidateExceptionIfDurationIsNull_IsNegativeDigit() {
+    void shouldThrowValidateExceptionIfDurationIsNegative() {
         film.setDuration(-1);
         assertThrows(ValidationException.class, validExecutor);
         film.setDuration(0);
