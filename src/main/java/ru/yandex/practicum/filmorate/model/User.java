@@ -1,9 +1,14 @@
 package ru.yandex.practicum.filmorate.model;
 
-import lombok.*;
+import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.experimental.FieldDefaults;
+
 import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 @Data
@@ -12,14 +17,26 @@ import java.util.Set;
 @EqualsAndHashCode(exclude = "friendIds")
 public class User {
     Integer id;
+    String name;
     String email;
     String login;
-    String name;
     LocalDate birthday;
     final Set<Integer> friendIds = new HashSet<>();
+    final Set<Integer> sentRequests = new LinkedHashSet<>();
+    final Set<Integer> receivedRequests = new LinkedHashSet<>();
 
     public void addFriend(int friendId) {
         friendIds.add(friendId);
+        sentRequests.remove(friendId);
+        receivedRequests.remove(friendId);
+    }
+
+    public void sendRequests(int friendId) {
+        sentRequests.add(friendId);
+    }
+
+    public void receiveRequests(int friendId) {
+        receivedRequests.add(friendId);
     }
 
     public void removeFriend(int friendId) {

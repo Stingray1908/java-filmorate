@@ -14,4 +14,10 @@ public interface UserStorage {
     User getById(int id);
 
     Collection<User> getAll();
+
+    void addRequests(int user, int friend);
+
+    void confirmRequests(int user, int friend);
+
+    void deleteRequests(int user, int friend);
 }
