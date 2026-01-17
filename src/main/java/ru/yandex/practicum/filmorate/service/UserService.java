@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
@@ -44,30 +45,62 @@ public class UserService {
         User friend = userStorage.getById(friendId);
 
         if (user == null || friend == null) {
-            throw new ValidationException("Пользователь не найден");
-        }
-
-        if (userId == friendId) {
-            String msg = "Пользователь с ID " + userId + " попытался добавить себя в друзья";
+            String msg = "Пользователь с ID " + userId + " или друг с ID " + friendId + " не найден";
             log.warn(msg);
             throw new ValidationException(msg);
         }
 
-        user.addFriend(friendId);
-        friend.addFriend(userId);
-        log.debug("Пользователю ID:{} добавлен друг ID:{}", userId, friendId);
+        if (userId == friendId) {
+            String msg = "Попытка добавить себя в друзья: пользователь ID " + userId;
+            log.warn(msg);
+            throw new IllegalArgumentException(msg);
+        }
+
+        if (user.getFriendIds().contains(friendId)) {
+            String msg = "Пользователь ID " + userId + " пытается добавить в друзья уже существующего друга ID " + friendId;
+            log.warn(msg);
+            throw new IllegalArgumentException("Пользователь уже является другом");
+        }
+
+        if (user.getSentRequests().contains(friendId)) {
+            String msg = "Пользователь ID " + userId + " пытается отправить повторный запрос дружбы пользователю ID " + friendId;
+            log.warn(msg);
+            throw new IllegalArgumentException("Запрос дружбы уже отправлен");
+        }
+
+        if (user.getReceivedRequests().contains(friendId)) {
+            userStorage.confirmRequests(friendId, userId);
+            user.addFriend(friendId);
+            friend.addFriend(userId);
+            log.info("Дружба подтверждена: пользователь ID {} и пользователь ID {} теперь друзья", userId, friendId);
+            return;
+        }
+
+        userStorage.addRequests(userId, friendId);
+        user.sendRequests(friendId);
+        friend.receiveRequests(userId);
+        log.debug("Отправлен запрос дружбы: пользователь ID {} → пользователь ID {}", userId, friendId);
     }
+
 
     // Удаляем друга по ID
     public void removeFriend(int userId, int friendId) {
         User user = userStorage.getById(userId);
         User friend = userStorage.getById(friendId);
 
-        if (user != null && friend != null) {
-            user.removeFriend(friendId);
-            friend.removeFriend(userId);
+        if (user == null) {
+            log.warn("Пользователь с ID {} не найден при попытке удалить друга", userId);
+            throw new NotFoundException("Пользователь с ID " + userId + " не найден");
         }
+        if (friend == null) {
+            log.warn("Друг с ID {} не найден при попытке удалить дружбу", friendId);
+            throw new NotFoundException("Друг с ID " + friendId + " не найден");
+        }
+
+        user.removeFriend(friendId);
+        friend.removeFriend(userId);
     }
+
 
     // Получаем список друзей (объекты User)
     public List<User> getFriends(int userId) {
